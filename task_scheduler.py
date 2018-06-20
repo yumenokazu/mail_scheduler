@@ -20,10 +20,10 @@ scheduler.start()  # start scheduler
 
 def _create_body(players: typing.List["Player"], current_time: datetime):
     """
-    Create mail html body
+    Create mail html body with starting and stopping player names
     :param players: list with instances of Player class
     :param current_time: current time in datetime format
-    :return: html with starting and stopping player names or None
+    :return: tuple containing html or None and subject string or None
     """
     from io import StringIO
     should_start = [p.name for p in players if p.should_start(current_time)]
@@ -41,9 +41,10 @@ def _create_body(players: typing.List["Player"], current_time: datetime):
         for name in should_stop:
             buf.write("-%s<br>" % name)
         buf.write('</div>')
-        return buf.getvalue()
+        subject = "+%s; -%s" %(', +'.join(should_start), ', -'.join(should_stop))
+        return (buf.getvalue(), subject)
     else:
-        return None
+        return (None, None)
 
 
 # Schedules compose_mail to be run every 6 hours
@@ -57,9 +58,9 @@ def compose_mail():
         for job in scheduler.get_jobs():
             current_time = (job.next_run_time - timedelta(hours=interval)).strftime('%Y-%m-%d %H:%M:%S')
             current_time = datetime.strptime(current_time, '%Y-%m-%d %H:%M:%S')
-            body = _create_body(players, current_time)
+            body, subject = _create_body(players, current_time)
             if body is not None:
-                send_mail(body)
+                send_mail(body, subject)
     except Exception as e:
         logging.exception(e, exc_info=True)
     finally:

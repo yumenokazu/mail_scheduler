@@ -14,7 +14,6 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USER')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     RECIPIENT = os.environ.get('RECIPIENT')
-    SUBJECT = "Schedule"
 
 
 class ProductionConfig(Config):

@@ -1,4 +1,7 @@
 import os
+from keyrings.cryptfile.cryptfile import CryptFileKeyring
+kr = CryptFileKeyring()
+kr.file_path = os.path.join(os.getcwd(), 'keyring')
 
 
 class Config(object):
@@ -11,9 +14,13 @@ class Config(object):
     MAIL_USE_TLS = False
     MAIL_USE_SSL = True
 
-    MAIL_USERNAME = os.environ.get('MAIL_USER')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    RECIPIENT = os.environ.get('RECIPIENT')
+    try:
+        MAIL_USERNAME = kr.get_password("scheduled_mail", "MAIL_USER")
+        MAIL_PASSWORD = kr.get_password("scheduled_mail", "MAIL_PASSWORD")
+        RECIPIENT = kr.get_password("scheduled_mail", "RECIPIENT")
+    except ValueError as e:
+        print(e)
+        quit(1)
 
 
 class ProductionConfig(Config):
@@ -23,8 +30,6 @@ class ProductionConfig(Config):
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
-
-
 
 
 class TestingConfig(Config):

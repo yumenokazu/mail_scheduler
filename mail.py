@@ -1,5 +1,5 @@
 from flask_mail import Mail, Message
-from app import app
+from wsgi import application as app
 
 
 def send_mail(body, subject):

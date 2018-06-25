@@ -1,13 +1,19 @@
 from flask import Flask
-import config
+
 import os
+import config
+from exceptions import KeyringError
 
 
 def create_app():
-    cfg = config.ProductionConfig() if os.environ.get('ENV') == 'prod' else config.DevelopmentConfig()
+    try:
+        cfg = config.ProductionConfig() if os.environ.get('ENV') == 'prod' else config.DevelopmentConfig()
+    except KeyringError as e:
+        print(e)
+        quit(1)
 
     if all([cfg.MAIL_USERNAME, cfg.MAIL_PASSWORD, cfg.RECIPIENT]):
-        app = Flask(__name__)   # name "application" is recognized by gunicorn
+        app = Flask(__name__)
         app.config.from_object(cfg)
         return app
     else:
@@ -15,7 +21,7 @@ def create_app():
         quit(1)
 
 
-application = create_app()
+application = create_app()  # name "application" is recognized by gunicorn
 import task_scheduler
 
 if __name__ == "__main__":

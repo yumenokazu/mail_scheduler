@@ -4,42 +4,39 @@ from datetime import datetime, timedelta
 
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
+from wsgi import application as app
 
-from player import create_players
+from instance import create_from_csv
 from mail import send_mail
 
 
-players = create_players()
+players = create_from_csv(app.config.get("INSTANCE_PATH"))
 
-interval = 6  # interval for job schedule
+interval = app.config.get("SCHEDULER_INTERVAL")  # interval for job schedule
 interval_str = f"*/{interval}"
 scheduler = BackgroundScheduler()  # create scheduler
 atexit.register(lambda: scheduler.shutdown())  # shutdown scheduler when flask stops
 scheduler.start()  # start scheduler
 
 
-def _create_body(players: typing.List["Player"], current_time: datetime):
+def _create_body(players: typing.List["Instance"], current_time: datetime):
     """
     Create mail html body with starting and stopping player names
-    :param players: list with instances of Player class
+    :param players: list with instances of Instance class
     :param current_time: current time in datetime format
     :return: tuple containing html or None and subject string or None
     """
     from io import StringIO
     should_start = [p.name for p in players if p.should_start(current_time)]
     should_stop = [p.name for p in players if p.should_end(current_time)]
+    is_running = [p.name for p in players if p.is_running(current_time)]
     buf = StringIO()
     if len(should_stop) > 0 or len(should_stop) > 0:
-        buf.write('<div style="width:100px;background: #b5d387;'
+        buf.write('<div style="width:200px;background: #b5d387;'
                   'margin:10px auto; padding: 20px 20px 20px 50px;'
-                  'font-size: large;">')
-        for name in should_start:
+                  'font-size: large;"><p>Should be running:</p>')
+        for name in is_running:
             buf.write("+%s<br>" % name)
-        buf.write('</div><div style="width:100px;background: #80b7c9;'
-                  'margin:10px auto; padding: 20px 20px 20px 50px;'
-                  'font-size: large;">')
-        for name in should_stop:
-            buf.write("-%s<br>" % name)
         buf.write('</div>')
         subject = "+%s; -%s" %(', +'.join(should_start), ', -'.join(should_stop))
         return (buf.getvalue(), subject)
@@ -59,7 +56,7 @@ def compose_mail():
             current_time = (job.next_run_time - timedelta(hours=interval)).strftime('%Y-%m-%d %H:%M:%S')
             current_time = datetime.strptime(current_time, '%Y-%m-%d %H:%M:%S')
             body, subject = _create_body(players, current_time)
-            if body is not None:
+            if (body is not None) and (subject is not None):
                 send_mail(body, subject)
     except Exception as e:
         logging.exception(e, exc_info=True)

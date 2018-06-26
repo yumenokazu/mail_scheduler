@@ -47,6 +47,9 @@ class DevelopmentConfig(Config):
         self.DEVELOPMENT = True
         self.DEBUG = True
 
+        # Scheduler settings
+        self.SCHEDULER_INTERVAL = 6
+
 
 class TestingConfig(Config):
     def __init__(self):

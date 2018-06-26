@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
-from wsgi import application as app
 
+from app import app
 from instance import create_from_csv
 from mail import send_mail
 
@@ -36,7 +36,7 @@ def _create_body(players: typing.List["Instance"], current_time: datetime):
                   'margin:10px auto; padding: 20px 20px 20px 50px;'
                   'font-size: large;"><p>Should be running:</p>')
         for name in is_running:
-            buf.write("+%s<br>" % name)
+            buf.write("%s<br>" % name)
         buf.write('</div>')
         subject = "+%s; -%s" %(', +'.join(should_start), ', -'.join(should_stop))
         return (buf.getvalue(), subject)

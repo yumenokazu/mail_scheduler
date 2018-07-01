@@ -12,11 +12,12 @@ from mail import send_mail
 
 players = create_from_csv(app.config.get("INSTANCE_PATH"))
 
-interval = app.config.get("SCHEDULER_INTERVAL")  # interval for job schedule
-interval_str = f"*/{interval}"
-scheduler = BackgroundScheduler()  # create scheduler
-atexit.register(lambda: scheduler.shutdown())  # shutdown scheduler when flask stops
-scheduler.start()  # start scheduler
+if not players:
+    interval = app.config.get("SCHEDULER_INTERVAL")  # interval for job schedule
+    interval_str = f"*/{interval}"
+    scheduler = BackgroundScheduler()  # create scheduler
+    atexit.register(lambda: scheduler.shutdown())  # shutdown scheduler when flask stops
+    scheduler.start()  # start scheduler
 
 
 def _create_body(players: typing.List["Instance"], current_time: datetime):

@@ -1,4 +1,5 @@
 import os, sys
+from datetime import datetime
 
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 from exceptions import KeyringError
@@ -32,7 +33,8 @@ class Config(object):
         self.SCHEDULER_INTERVAL = 1
 
         # Config file for instances
-        self.INSTANCE_PATH = "instances"
+        self.INSTANCE_PATH = "instances.json"
+        self.INSTANCE_START_DATE = datetime(2018, 6, 19, 0, 0, 0)
 
 
 class ProductionConfig(Config):

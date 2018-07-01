@@ -1,8 +1,10 @@
-from datetime import datetime
+from jsonschema import ValidationError
+
+from app import app
 
 
 class Instance:
-    base_datetime = datetime(2018, 6, 19, 0, 0, 0)
+    base_datetime = app.config.get("INSTANCE_START_DATE")
     idle_time = 12
 
     def __init__(self, name, offset, duration=None):
@@ -18,7 +20,7 @@ class Instance:
         return self.idle_time + self.duration
 
     def should_start(self, current_time):
-        delta_since_base = current_time - self.base_datetime
+        delta_since_base = current_time - Instance.base_datetime
         days, seconds = delta_since_base.days, delta_since_base.seconds
         h_since_base = days * 24 + seconds // 3600
         if h_since_base == 0 and self.offset > self.idle_time:
@@ -30,7 +32,7 @@ class Instance:
 
     def should_end(self, current_time):
         end_offset = self.offset + self.duration
-        delta_since_base = current_time - self.base_datetime
+        delta_since_base = current_time - Instance.base_datetime
         days, seconds = delta_since_base.days, delta_since_base.seconds
         h_since_base = days * 24 + seconds // 3600
         if ((h_since_base - end_offset) % self.full_cycle) == 0:
@@ -39,7 +41,7 @@ class Instance:
             return False
 
     def is_running(self, current_time):
-        delta_since_base = current_time - self.base_datetime
+        delta_since_base = current_time - Instance.base_datetime
         days, seconds = delta_since_base.days, delta_since_base.seconds
         h_since_base = days * 24 + seconds // 3600
         remainder = (h_since_base - self.offset) % (self.full_cycle)
@@ -54,16 +56,42 @@ class Instance:
         return "<Instance(name=%s)>" % (self.name)
 
 
-def create_from_csv(path):
+def create_from_json(path):
     """
-    Read csv file and return list of Instance
+    Read json file and return list of Instance
     :param path: path to file
     :return: list of Instance
     """
-    import csv
+    import json
+    from jsonschema import validate
 
-    with open(path, newline='') as f:
-        reader = csv.reader(f)
-        return [Instance(*row) for row in reader]
-
-
+    try:
+        with open(path, newline='') as f:
+            data = json.load(f)
+            schema = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "offset": {"type": "integer"},
+                        "duration": {"type": "integer"}
+                    },
+                    "required": ["name", "offset"]
+                }
+            }
+            validate(data, schema)  # will raise ValidationError if .json doesn't match the schema
+            instances = []
+            for item in data:
+                instances.append(Instance(name=item.get("name"),
+                                          offset=item.get("offset"),
+                                          duration=item.get("duration")))
+            return instances
+    except IOError as e:
+        print(e)
+        return []
+    except ValidationError as e:
+        print(e)
+        print("Check .json_example file for valid schema. "
+              "Name and offset are required. Duration is optional.")
+        return []

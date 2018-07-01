@@ -6,18 +6,8 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app import app
-from instance import create_from_csv
+from instance import create_from_json
 from mail import send_mail
-
-
-players = create_from_csv(app.config.get("INSTANCE_PATH"))
-
-if not players:
-    interval = app.config.get("SCHEDULER_INTERVAL")  # interval for job schedule
-    interval_str = f"*/{interval}"
-    scheduler = BackgroundScheduler()  # create scheduler
-    atexit.register(lambda: scheduler.shutdown())  # shutdown scheduler when flask stops
-    scheduler.start()  # start scheduler
 
 
 def _create_body(players: typing.List["Instance"], current_time: datetime):
@@ -45,10 +35,7 @@ def _create_body(players: typing.List["Instance"], current_time: datetime):
         return (None, None)
 
 
-# Schedules compose_mail to be run every 6 hours
-@scheduler.scheduled_job('cron', id="compose_mail", hour=interval_str, misfire_grace_time=3600, coalesce=True,
-                         max_instances=2)
-def compose_mail():
+def compose_mail(scheduler):
     """
     Compose and send e-mail
     """
@@ -63,3 +50,20 @@ def compose_mail():
         logging.exception(e, exc_info=True)
     finally:
         print(scheduler.print_jobs())
+
+
+players = create_from_json(app.config.get("INSTANCE_PATH"))
+
+if players:
+    interval = app.config.get("SCHEDULER_INTERVAL")  # interval for job schedule
+    interval_str = f"*/{interval}"
+    scheduler = BackgroundScheduler()  # create scheduler
+    atexit.register(lambda: scheduler.shutdown())  # shutdown scheduler when flask stops
+    scheduler.start()  # start scheduler
+    scheduler.add_job(lambda: compose_mail(scheduler),
+                      'cron',
+                      hour=interval_str,
+                      id="compose_mail",
+                      misfire_grace_time=3600,
+                      coalesce=True,
+                      max_instances=2)
